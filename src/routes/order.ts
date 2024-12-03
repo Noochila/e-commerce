@@ -141,7 +141,7 @@ orderRouter.get("/recent/:id?", async (req, res) => {
 });
 
 
-orderRouter.get("/orderbyproduct/:productId", async (req, res) => {
+orderRouter.get("/users/who-bought/:productId", async (req, res) => {
   const { productId } = req.params;
   try {
 

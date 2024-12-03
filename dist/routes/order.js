@@ -134,7 +134,7 @@ exports.orderRouter.get("/recent/:id?", (req, res) => __awaiter(void 0, void 0, 
         res.status(500).json({ error: "An error occurred while fetching recent orders" });
     }
 }));
-exports.orderRouter.get("/orderbyproduct/:productId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.orderRouter.get("/users/who-bought/:productId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { productId } = req.params;
     try {
         const productExists = yield db_1.default.product.findUnique({
