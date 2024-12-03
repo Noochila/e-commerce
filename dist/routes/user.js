@@ -19,14 +19,14 @@ const db_1 = __importDefault(require("../db"));
 const zod_1 = __importDefault(require("zod"));
 const db_2 = require("../db");
 const UserSchema = zod_1.default.object({
-    name: zod_1.default.string(),
-    email: zod_1.default.string().email("Invalid email"),
-    password: zod_1.default.string().min(6, "Password too short"),
-    phone: zod_1.default.string().min(10, "Invalid phone number")
+    name: zod_1.default.string({ required_error: "Name is required" }).min(3, "Minimum 3 characters required"),
+    email: zod_1.default.string({ required_error: "Email is requried" }).email("Invalid email"),
+    password: zod_1.default.string({ required_error: "Password is required" }).min(6, "Password too short"),
+    phone: zod_1.default.string({ required_error: "Phone no Required" }).min(10, "Invalid phone number required 10 digits")
 });
 const UserUpdateSchema = zod_1.default.object({
     name: zod_1.default.string().optional(),
-    email: zod_1.default.string().email("Invalid email"),
+    email: zod_1.default.string({ required_error: "Email is requried" }).email("Invalid email"),
     password: zod_1.default.string().min(6, "Password too short").optional(),
     phone: zod_1.default.string().min(10, "Invalid phone number").optional()
 });
@@ -44,6 +44,11 @@ const validate = (schema) => (req, res, next) => __awaiter(void 0, void 0, void 
     }
 });
 exports.userRouter.put("/", validate(UserUpdateSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email } = req.body;
+    if (!email) {
+        res.status(400).json({ message: "Email is required for updating" });
+        return;
+    }
     const user = yield db_1.default.user.findUnique({ where: { email: req.body.email } });
     if (user) {
         try {
@@ -118,3 +123,7 @@ exports.userRouter.post("/", validate(UserSchema), (req, res) => __awaiter(void 
         }
     }
 }));
+exports.userRouter.use((err, req, res, next) => {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+});

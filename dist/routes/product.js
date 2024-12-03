@@ -18,6 +18,7 @@ exports.productRouter = express_1.default.Router();
 const db_1 = require("../db");
 const db_2 = __importDefault(require("../db"));
 const zod_1 = __importDefault(require("zod"));
+// Define schemas for validation
 const productSchema = zod_1.default.object({
     name: zod_1.default.string({ required_error: "Product Name is required" }).min(3, "Minimum 3 characters required"),
     price: zod_1.default.number(),
@@ -30,33 +31,41 @@ const productUpdateSchema = zod_1.default.object({
     category: zod_1.default.string().min(3, "Minimum 3 characters required").optional(),
     stockQuantity: zod_1.default.number().optional()
 });
+// Validation middleware
 const validate = (schema) => (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const product = schema.parse(req.body);
+        schema.parse(req.body);
         next();
     }
     catch (error) {
         if (error instanceof zod_1.default.ZodError) {
             res.status(400).json({
-                message: error.errors[0].message
+                message: error.errors.map(err => err.message).join(", ")
+            });
+        }
+        else {
+            res.status(500).json({
+                message: "Internal server error"
             });
         }
     }
 });
+// GET all products
 exports.productRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const products = yield db_2.default.product.findMany({ select: { id: true, name: true, price: true, category: true, stockQuantity: true } });
-        res.json({
-            products: products
+        const products = yield db_2.default.product.findMany({
+            select: { id: true, name: true, price: true, category: true, stockQuantity: true }
         });
+        res.json({ products });
     }
     catch (e) {
-        if (e instanceof db_1.Prisma.PrismaClientKnownRequestError) {
-            res.status(400).json({ error: 'Something went wrong' });
-        }
+        console.error(e);
+        res.status(500).json({ error: 'Something went wrong' });
     }
 }));
+// GET total stock quantity of products
 exports.productRouter.get("/total", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const quantity = yield db_2.default.product.aggregate({
             _sum: {
@@ -64,53 +73,61 @@ exports.productRouter.get("/total", (req, res) => __awaiter(void 0, void 0, void
             }
         });
         res.json({
-            totalProducts: (quantity._sum.stockQuantity ? quantity._sum.stockQuantity : 0)
+            totalProducts: (_a = quantity._sum.stockQuantity) !== null && _a !== void 0 ? _a : 0
         });
     }
     catch (e) {
-        if (e instanceof db_1.Prisma.PrismaClientKnownRequestError) {
-            res.status(400).json({ error: 'Something went wrong' });
-        }
+        console.error(e);
+        res.status(500).json({ error: 'Something went wrong' });
     }
 }));
+// POST create a new product
 exports.productRouter.post("/", validate(productSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const product = yield db_2.default.product.create({ data: req.body, select: { name: true, price: true, category: true, stockQuantity: true } });
-        res.json({
+        const product = yield db_2.default.product.create({
+            data: req.body,
+            select: { name: true, price: true, category: true, stockQuantity: true }
+        });
+        res.status(201).json({
             message: "Product created",
-            product: product
+            product
         });
     }
     catch (e) {
-        if (e instanceof db_1.Prisma.PrismaClientKnownRequestError) {
-            if (e.code === 'P2002') {
-                res.status(400).json({ error: 'Product with Product Name Already exists' });
-            }
-            else {
-                res.status(400).json({ error: 'Something went wrong' });
-            }
+        if (e instanceof db_1.Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+            res.status(400).json({ error: 'Product with that name already exists' });
+        }
+        else {
+            res.status(500).json({ error: 'Something went wrong' });
         }
     }
 }));
+// PUT update an existing product by name
 exports.productRouter.put("/", validate(productUpdateSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const product = yield db_2.default.product.findUnique({ where: { name: req.body.name } });
-    if (product) {
-        try {
-            const updatedProduct = yield db_2.default.product.update({ where: { name: req.body.name }, data: req.body, select: { name: true, price: true, category: true, stockQuantity: true } });
+    const { name } = req.body;
+    try {
+        const product = yield db_2.default.product.findUnique({ where: { name } });
+        if (product) {
+            const updatedProduct = yield db_2.default.product.update({
+                where: { name },
+                data: req.body,
+                select: { name: true, price: true, category: true, stockQuantity: true }
+            });
             res.json({
                 message: "Product updated successfully",
                 product: updatedProduct
             });
         }
-        catch (e) {
-            if (e instanceof db_1.Prisma.PrismaClientKnownRequestError) {
-                res.status(400).json({ error: 'Something went wrong' });
-            }
+        else {
+            res.status(404).json({ message: "Product not found" });
         }
     }
-    else {
-        res.status(400).json({
-            message: "Product not found"
-        });
+    catch (e) {
+        if (e instanceof db_1.Prisma.PrismaClientKnownRequestError) {
+            res.status(500).json({ error: 'Something went wrong' });
+        }
+        else {
+            res.status(500).json({ error: 'Internal server error' });
+        }
     }
 }));

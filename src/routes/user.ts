@@ -5,16 +5,16 @@ import zod, { any, ZodAny } from "zod"
 import { Prisma } from "../db"
 
 const UserSchema = zod.object({
-    name: zod.string(),
-    email: zod.string().email("Invalid email"),
-    password: zod.string().min(6, "Password too short"),
-    phone: zod.string().min(10, "Invalid phone number")
+    name: zod.string({ required_error: "Name is required" }).min(3, "Minimum 3 characters required"),
+    email: zod.string({ required_error:"Email is requried" }).email("Invalid email"),
+    password: zod.string({required_error:"Password is required"}).min(6, "Password too short"),
+    phone: zod.string({required_error:"Phone no Required"}).min(10, "Invalid phone number required 10 digits")
 
 })
 
 const UserUpdateSchema = zod.object({
     name: zod.string().optional(),
-    email: zod.string().email("Invalid email"),
+    email: zod.string({ required_error:"Email is requried" }).email("Invalid email"),
     password: zod.string().min(6, "Password too short").optional(),
     phone: zod.string().min(10, "Invalid phone number").optional()
 
