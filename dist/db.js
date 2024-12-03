@@ -12,4 +12,3 @@ const prisma = (_a = globalThis.prismaGlobal) !== null && _a !== void 0 ? _a : p
 exports.default = prisma;
 if (process.env.NODE_ENV !== 'production')
     globalThis.prismaGlobal = prisma;
-//# sourceMappingURL=db.js.map

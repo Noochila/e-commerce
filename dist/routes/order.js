@@ -16,6 +16,7 @@ exports.orderRouter = void 0;
 const express_1 = __importDefault(require("express"));
 exports.orderRouter = express_1.default.Router();
 const db_1 = __importDefault(require("../db"));
+const db_2 = require("../db");
 const zod_1 = __importDefault(require("zod"));
 const orderSchema = zod_1.default.object({
     userId: zod_1.default.number().int().positive("User ID must be a positive integer"),
@@ -24,12 +25,6 @@ const orderSchema = zod_1.default.object({
         quantity: zod_1.default.number().int().positive("Quantity must be a positive integer"),
     })).nonempty("Products array cannot be empty"),
 });
-exports.orderRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const orders = yield db_1.default.order.findMany({ select: { id: true, orderDate: true, userId: true, products: { select: { productId: true, quantity: true } } } });
-    res.json({
-        orders: orders
-    });
-}));
 const validate = (schema) => {
     return (req, res, next) => {
         try {
@@ -47,15 +42,13 @@ const validate = (schema) => {
 };
 exports.orderRouter.post("/", validate(orderSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // Find user
         const user = yield db_1.default.user.findUnique({
             where: { id: req.body.userId },
         });
         if (!user) {
             res.status(400).json({ message: "User not found" });
-            return; // Explicitly return to avoid further execution
+            return;
         }
-        // Validate products and check stock availability
         const products = req.body.products;
         for (const product of products) {
             const productDb = yield db_1.default.product.findUnique({
@@ -65,20 +58,17 @@ exports.orderRouter.post("/", validate(orderSchema), (req, res) => __awaiter(voi
                 res
                     .status(400)
                     .json({ message: `Product with ID ${product.productId} is out of stock or Not found` });
-                return; // Explicitly return to avoid further execution
+                return;
             }
         }
         try {
-            // Create order and associated order products in a transaction
             yield db_1.default.$transaction((transaction) => __awaiter(void 0, void 0, void 0, function* () {
-                // Create the order
                 const order = yield transaction.order.create({
                     data: {
                         userId: req.body.userId,
                         orderDate: new Date(),
                     },
                 });
-                // Process each product and update stock within the transaction
                 for (const product of products) {
                     yield transaction.orderProduct.create({
                         data: {
@@ -96,7 +86,6 @@ exports.orderRouter.post("/", validate(orderSchema), (req, res) => __awaiter(voi
                         },
                     });
                 }
-                // Send success response
                 res.json({
                     message: "Order created successfully",
                     order,
@@ -106,7 +95,7 @@ exports.orderRouter.post("/", validate(orderSchema), (req, res) => __awaiter(voi
         catch (transactionError) {
             console.error("Transaction error:", transactionError);
             res.status(500).json({ message: "Failed to create order" });
-            return; // Ensure no further processing
+            return;
         }
     }
     catch (error) {
@@ -114,4 +103,97 @@ exports.orderRouter.post("/", validate(orderSchema), (req, res) => __awaiter(voi
         res.status(500).json({ message: "Internal server error" });
     }
 }));
-//# sourceMappingURL=order.js.map
+exports.orderRouter.get("/recent/:id?", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.params.id ? parseInt(req.params.id) : null;
+        const orders = yield db_1.default.order.findMany({
+            where: {
+                userId: userId ? userId : undefined,
+                orderDate: {
+                    gte: new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
+                },
+            },
+            select: {
+                id: true,
+                orderDate: true,
+                userId: true,
+                products: {
+                    select: {
+                        productId: true,
+                        quantity: true,
+                    },
+                },
+            },
+        });
+        res.json({
+            orders: orders,
+        });
+    }
+    catch (error) {
+        console.error("Error fetching recent orders:", error);
+        res.status(500).json({ error: "An error occurred while fetching recent orders" });
+    }
+}));
+exports.orderRouter.get("/orderbyproduct/:productId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { productId } = req.params;
+    try {
+        const productExists = yield db_1.default.product.findUnique({
+            where: { id: parseInt(productId) },
+        });
+        if (!productExists) {
+            res.status(404).json({ error: 'Product not found' });
+            return;
+        }
+        const users = yield db_1.default.orderProduct.findMany({
+            where: {
+                product: {
+                    name: productExists.name
+                }
+            },
+            select: {
+                order: {
+                    select: {
+                        userId: true
+                    }
+                }
+            }
+        });
+        const userIds = [...new Set(users.map((user) => user.order.userId))];
+        res.status(200).json({ userIds });
+    }
+    catch (e) {
+        console.error("Error grouping by productId and userId:", e);
+        if (e instanceof db_2.Prisma.PrismaClientKnownRequestError) {
+            res.status(400).json({ error: "Something went wrong" });
+        }
+        else {
+            res.status(500).json({ error: "Internal server error" });
+        }
+    }
+}));
+exports.orderRouter.get("/:id?", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.params.id ? parseInt(req.params.id) : null;
+        const orders = yield db_1.default.order.findMany({
+            where: userId ? { userId } : {},
+            select: {
+                id: true,
+                orderDate: true,
+                userId: true,
+                products: {
+                    select: {
+                        productId: true,
+                        quantity: true,
+                    },
+                },
+            },
+        });
+        res.json({
+            orders: orders,
+        });
+    }
+    catch (error) {
+        console.error("Error fetching orders:", error);
+        res.status(500).json({ error: "An error occurred while fetching orders" });
+    }
+}));

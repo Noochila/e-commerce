@@ -101,4 +101,3 @@ exports.userRouter.post("/", validate(UserSchema), (req, res) => __awaiter(void 
         }
     }
 }));
-//# sourceMappingURL=user.js.map

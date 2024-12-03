@@ -56,6 +56,23 @@ exports.productRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, f
         }
     }
 }));
+exports.productRouter.get("/total", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const quantity = yield db_2.default.product.aggregate({
+            _sum: {
+                stockQuantity: true
+            }
+        });
+        res.json({
+            totalProducts: (quantity._sum.stockQuantity ? quantity._sum.stockQuantity : 0)
+        });
+    }
+    catch (e) {
+        if (e instanceof db_1.Prisma.PrismaClientKnownRequestError) {
+            res.status(400).json({ error: 'Something went wrong' });
+        }
+    }
+}));
 exports.productRouter.post("/", validate(productSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const product = yield db_2.default.product.create({ data: req.body, select: { name: true, price: true, category: true, stockQuantity: true } });
@@ -97,4 +114,3 @@ exports.productRouter.put("/", validate(productUpdateSchema), (req, res) => __aw
         });
     }
 }));
-//# sourceMappingURL=product.js.map

@@ -12,4 +12,3 @@ const order_1 = require("./order");
 exports.rootRouter.use("/users", user_1.userRouter);
 exports.rootRouter.use("/products", product_1.productRouter);
 exports.rootRouter.use("/orders", order_1.orderRouter);
-//# sourceMappingURL=index.js.map

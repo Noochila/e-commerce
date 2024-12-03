@@ -1,13 +1,12 @@
 import express from "express"
 export const productRouter = express.Router()
-
 import { Prisma } from "../db"
 import db from "../db"
 
 
 import zod from "zod"
 const productSchema = zod.object({
-    name: zod.string({required_error:"Product Name is required"}).min(3, "Minimum 3 characters required"),
+    name: zod.string({ required_error: "Product Name is required" }).min(3, "Minimum 3 characters required"),
     price: zod.number(),
     category: zod.string().min(3, "Minimum 3 characters required"),
     stockQuantity: zod.number()
@@ -35,7 +34,7 @@ const validate = (schema: zod.Schema) => async (req: express.Request, res: expre
 
 productRouter.get("/", async (req, res) => {
     try {
-        const products = await db.product.findMany({ select: {id:true, name: true, price: true, category: true, stockQuantity: true } })
+        const products = await db.product.findMany({ select: { id: true, name: true, price: true, category: true, stockQuantity: true } })
         res.json({
             products: products
         })
@@ -45,6 +44,23 @@ productRouter.get("/", async (req, res) => {
         }
     }
 
+})
+
+productRouter.get("/total", async (req, res) => {
+    try {
+        const quantity = await db.product.aggregate({
+            _sum: {
+                stockQuantity: true
+            }
+        })
+        res.json({
+            totalProducts: (quantity._sum.stockQuantity ? quantity._sum.stockQuantity : 0)
+        })
+    } catch (e) {
+        if (e instanceof Prisma.PrismaClientKnownRequestError) {
+            res.status(400).json({ error: 'Something went wrong' })
+        }
+    }
 })
 
 
@@ -93,3 +109,4 @@ productRouter.put("/", validate(productUpdateSchema), async (req, res) => {
         })
     }
 })
+
