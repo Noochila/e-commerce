@@ -25,6 +25,13 @@ const orderSchema = zod_1.default.object({
         quantity: zod_1.default.number().int().positive("Quantity must be a positive integer"),
     })).nonempty("Products array cannot be empty"),
 });
+const updateOrderSchema = zod_1.default.object({
+    orderId: zod_1.default.number().int().positive("Order ID must be a positive integer"),
+    products: zod_1.default.array(zod_1.default.object({
+        productId: zod_1.default.number().int().min(0, "Product ID must be a positive integer"),
+        quantity: zod_1.default.number().int().min(0, "Quantity must be a positive integer"),
+    })).nonempty("Products array cannot be empty"),
+});
 const validate = (schema) => {
     return (req, res, next) => {
         try {
@@ -36,6 +43,7 @@ const validate = (schema) => {
                 res.status(400).json({
                     message: error.errors[0].message,
                 });
+                return;
             }
         }
     };
@@ -101,6 +109,81 @@ exports.orderRouter.post("/", validate(orderSchema), (req, res) => __awaiter(voi
     catch (error) {
         console.error("Error:", error);
         res.status(500).json({ message: "Internal server error" });
+        return;
+    }
+}));
+exports.orderRouter.put("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const orderId = parseInt(req.body.orderId);
+        const { products: updatedProducts } = req.body;
+        const existingOrder = yield db_1.default.order.findUnique({
+            where: { id: orderId },
+            include: {
+                products: true, // Include associated OrderProduct entries
+            },
+        });
+        if (!existingOrder) {
+            res.status(404).json({ message: "Order not found" });
+            return;
+        }
+        // Map existing products by productId for quick lookup
+        const existingProductsMap = new Map(existingOrder.products.map((p) => [p.productId, p]));
+        // Start a transaction for the update operation
+        yield db_1.default.$transaction((transaction) => __awaiter(void 0, void 0, void 0, function* () {
+            for (const updatedProduct of updatedProducts) {
+                const existingProduct = existingProductsMap.get(updatedProduct.productId);
+                if (existingProduct) {
+                    // Revert stock quantity for the existing product
+                    yield transaction.product.update({
+                        where: { id: existingProduct.productId },
+                        data: {
+                            stockQuantity: {
+                                increment: existingProduct.quantity,
+                            },
+                        },
+                    });
+                    // Remove the existing OrderProduct entry
+                    yield transaction.orderProduct.delete({
+                        where: { id: existingProduct.id },
+                    });
+                }
+                // Skip creating new OrderProduct entry if quantity is zero
+                if (updatedProduct.quantity === 0) {
+                    continue;
+                }
+                // Validate stock availability for the new product
+                const productDb = yield transaction.product.findUnique({
+                    where: { id: updatedProduct.productId },
+                });
+                if (!productDb || productDb.stockQuantity < updatedProduct.quantity) {
+                    throw new Error(`Product with ID ${updatedProduct.productId} is out of stock or not found.`);
+                }
+                // Decrement stock quantities for the new product
+                yield transaction.product.update({
+                    where: { id: updatedProduct.productId },
+                    data: {
+                        stockQuantity: {
+                            decrement: updatedProduct.quantity,
+                        },
+                    },
+                });
+                // Add updated product to OrderProduct
+                yield transaction.orderProduct.create({
+                    data: {
+                        orderId: existingOrder.id,
+                        productId: updatedProduct.productId,
+                        quantity: updatedProduct.quantity,
+                    },
+                });
+            }
+        }));
+        res.json({ message: "Order updated successfully" });
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            console.error("Error updating order:", error);
+            res.status(500).json({ message: "Failed to update order", error: error.message });
+        }
     }
 }));
 exports.orderRouter.get("/recent/:id?", (req, res) => __awaiter(void 0, void 0, void 0, function* () {

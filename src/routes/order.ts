@@ -13,6 +13,16 @@ const orderSchema = zod.object({
     })
   ).nonempty("Products array cannot be empty"),
 });
+const updateOrderSchema = zod.object({
+  orderId: zod.number().int().positive("Order ID must be a positive integer"),
+  products: zod.array(
+    zod.object({
+      productId: zod.number().int().min(0, "Product ID must be a positive integer"),
+      quantity: zod.number().int().min(0, "Quantity must be a positive integer"),
+    })
+  ).nonempty("Products array cannot be empty"),
+})
+
 
 
 const validate = (schema: zod.Schema) => {
@@ -26,10 +36,12 @@ const validate = (schema: zod.Schema) => {
         res.status(400).json({
           message: error.errors[0].message,
         })
+        return;
       }
     }
   };
 }
+
 
 orderRouter.post("/", validate(orderSchema), async (req, res) => {
   try {
@@ -102,10 +114,100 @@ orderRouter.post("/", validate(orderSchema), async (req, res) => {
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ message: "Internal server error" });
+    return;
   }
 });
 
 
+orderRouter.put("/", async (req, res) => {
+  try {
+    const orderId = parseInt(req.body.orderId);
+    const { products: updatedProducts } = req.body;
+
+    const existingOrder = await db.order.findUnique({
+      where: { id: orderId },
+      include: {
+        products: true, // Include associated OrderProduct entries
+      },
+    });
+
+    if (!existingOrder) {
+      res.status(404).json({ message: "Order not found" });
+      return;
+    }
+
+    // Map existing products by productId for quick lookup
+    const existingProductsMap = new Map(
+      existingOrder.products.map((p) => [p.productId, p])
+    );
+
+    // Start a transaction for the update operation
+    await db.$transaction(async (transaction) => {
+      for (const updatedProduct of updatedProducts) {
+        const existingProduct = existingProductsMap.get(updatedProduct.productId);
+
+        if (existingProduct) {
+          // Revert stock quantity for the existing product
+          await transaction.product.update({
+            where: { id: existingProduct.productId },
+            data: {
+              stockQuantity: {
+                increment: existingProduct.quantity,
+              },
+            },
+          });
+
+          // Remove the existing OrderProduct entry
+          await transaction.orderProduct.delete({
+            where: { id: existingProduct.id },
+          });
+        }
+
+        // Skip creating new OrderProduct entry if quantity is zero
+        if (updatedProduct.quantity === 0) {
+          continue;
+        }
+
+        // Validate stock availability for the new product
+        const productDb = await transaction.product.findUnique({
+          where: { id: updatedProduct.productId },
+        });
+
+        if (!productDb || productDb.stockQuantity < updatedProduct.quantity) {
+          throw new Error(
+            `Product with ID ${updatedProduct.productId} is out of stock or not found.`
+          );
+        }
+
+        // Decrement stock quantities for the new product
+        await transaction.product.update({
+          where: { id: updatedProduct.productId },
+          data: {
+            stockQuantity: {
+              decrement: updatedProduct.quantity,
+            },
+          },
+        });
+
+        // Add updated product to OrderProduct
+        await transaction.orderProduct.create({
+          data: {
+            orderId: existingOrder.id,
+            productId: updatedProduct.productId,
+            quantity: updatedProduct.quantity,
+          },
+        });
+      }
+    });
+
+    res.json({ message: "Order updated successfully" });
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("Error updating order:", error);
+      res.status(500).json({ message: "Failed to update order", error: error.message });
+    }
+  }
+});
 
 orderRouter.get("/recent/:id?", async (req, res) => {
   try {
@@ -150,25 +252,25 @@ orderRouter.get("/users/who-bought/:productId", async (req, res) => {
     });
 
     if (!productExists) {
-       res.status(404).json({ error: 'Product not found' });
-       return ;
+      res.status(404).json({ error: 'Product not found' });
+      return;
     }
 
-   
+
     const users = await db.orderProduct.findMany({
       where: {
-         product:{
+        product: {
           name: productExists.name
-         }
-        },
-        select:{
-          order:{
-            select:{
-              userId:true
-            }
+        }
+      },
+      select: {
+        order: {
+          select: {
+            userId: true
           }
         }
-      });
+      }
+    });
 
     const userIds = [...new Set(users.map((user) => user.order.userId))];
 
