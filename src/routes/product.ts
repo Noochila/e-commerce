@@ -4,22 +4,22 @@ import { Prisma } from "../db";
 import db from "../db";
 import zod from "zod";
 
-// Define schemas for validation
+
 const productSchema = zod.object({
     name: zod.string({ required_error: "Product Name is required" }).min(3, "Minimum 3 characters required"),
-    price: zod.number(),
-    category: zod.string().min(3, "Minimum 3 characters required"),
-    stockQuantity: zod.number()
+    price: zod.number({ required_error: "Price is required" }).min(0.01, "Minimum price is 0.01"),
+    category: zod.string({required_error:"Category required"}).min(3, "Minimum 3 characters required"),
+    stockQuantity: zod.number({ required_error: "Stock Quantity is required" }).min(0, "Minimum 0 requried")
 });
 
 const productUpdateSchema = zod.object({
     name: zod.string({ required_error: "Product Name is required" }).min(3, "Minimum 3 characters required"),
-    price: zod.number().optional(),
+    price: zod.number().min(0.01, "Minimum price is 0.01").optional(),
     category: zod.string().min(3, "Minimum 3 characters required").optional(),
-    stockQuantity: zod.number().optional()
+    stockQuantity: zod.number().min(0,"Minimum 0 requried").optional()
 });
 
-// Validation middleware
+
 const validate = (schema: zod.ZodType<any, any, any>) => async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         schema.parse(req.body);
@@ -37,7 +37,7 @@ const validate = (schema: zod.ZodType<any, any, any>) => async (req: express.Req
     }
 };
 
-// GET all products
+
 productRouter.get("/", async (req, res) => {
     try {
         const products = await db.product.findMany({
@@ -50,7 +50,7 @@ productRouter.get("/", async (req, res) => {
     }
 });
 
-// GET total stock quantity of products
+
 productRouter.get("/total", async (req, res) => {
     try {
         const quantity = await db.product.aggregate({
@@ -67,7 +67,7 @@ productRouter.get("/total", async (req, res) => {
     }
 });
 
-// POST create a new product
+
 productRouter.post("/", validate(productSchema), async (req, res) => {
     try {
         const product = await db.product.create({
@@ -87,7 +87,7 @@ productRouter.post("/", validate(productSchema), async (req, res) => {
     }
 });
 
-// PUT update an existing product by name
+
 productRouter.put("/", validate(productUpdateSchema), async (req, res) => {
     const { name } = req.body;
     try {

@@ -18,20 +18,18 @@ exports.productRouter = express_1.default.Router();
 const db_1 = require("../db");
 const db_2 = __importDefault(require("../db"));
 const zod_1 = __importDefault(require("zod"));
-// Define schemas for validation
 const productSchema = zod_1.default.object({
     name: zod_1.default.string({ required_error: "Product Name is required" }).min(3, "Minimum 3 characters required"),
-    price: zod_1.default.number(),
-    category: zod_1.default.string().min(3, "Minimum 3 characters required"),
-    stockQuantity: zod_1.default.number()
+    price: zod_1.default.number({ required_error: "Price is required" }).min(0.01, "Minimum price is 0.01"),
+    category: zod_1.default.string({ required_error: "Category required" }).min(3, "Minimum 3 characters required"),
+    stockQuantity: zod_1.default.number({ required_error: "Stock Quantity is required" }).min(0, "Minimum 0 requried")
 });
 const productUpdateSchema = zod_1.default.object({
     name: zod_1.default.string({ required_error: "Product Name is required" }).min(3, "Minimum 3 characters required"),
-    price: zod_1.default.number().optional(),
+    price: zod_1.default.number().min(0.01, "Minimum price is 0.01").optional(),
     category: zod_1.default.string().min(3, "Minimum 3 characters required").optional(),
-    stockQuantity: zod_1.default.number().optional()
+    stockQuantity: zod_1.default.number().min(0, "Minimum 0 requried").optional()
 });
-// Validation middleware
 const validate = (schema) => (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         schema.parse(req.body);
@@ -50,7 +48,6 @@ const validate = (schema) => (req, res, next) => __awaiter(void 0, void 0, void 
         }
     }
 });
-// GET all products
 exports.productRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const products = yield db_2.default.product.findMany({
@@ -63,7 +60,6 @@ exports.productRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, f
         res.status(500).json({ error: 'Something went wrong' });
     }
 }));
-// GET total stock quantity of products
 exports.productRouter.get("/total", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
@@ -81,7 +77,6 @@ exports.productRouter.get("/total", (req, res) => __awaiter(void 0, void 0, void
         res.status(500).json({ error: 'Something went wrong' });
     }
 }));
-// POST create a new product
 exports.productRouter.post("/", validate(productSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const product = yield db_2.default.product.create({
@@ -102,7 +97,6 @@ exports.productRouter.post("/", validate(productSchema), (req, res) => __awaiter
         }
     }
 }));
-// PUT update an existing product by name
 exports.productRouter.put("/", validate(productUpdateSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name } = req.body;
     try {
