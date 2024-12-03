@@ -23,6 +23,10 @@ const updateOrderSchema = zod.object({
   ).nonempty("Products array cannot be empty"),
 })
 
+const idSchema=zod.object({
+  id: zod.number().int().positive("User ID must be a positive integer").optional()
+})
+
 
 
 const validate = (schema: zod.Schema) => {
@@ -41,6 +45,21 @@ const validate = (schema: zod.Schema) => {
     }
   };
 }
+// const validateId = (schema: zod.Schema) => {
+//   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+//     try {
+//       schema.parse(req.params);
+//       next();
+//     } catch (error) {
+//       if (error instanceof zod.ZodError) {
+//         res.status(400).json({
+//           message: error.errors[0].message,
+//         })
+//         return;
+//       }
+//     }
+//   };
+// }
 
 
 orderRouter.post("/", validate(orderSchema), async (req, res) => {
@@ -119,7 +138,7 @@ orderRouter.post("/", validate(orderSchema), async (req, res) => {
 });
 
 
-orderRouter.put("/", async (req, res) => {
+orderRouter.put("/", validate(updateOrderSchema), async (req, res) => {
   try {
     const orderId = parseInt(req.body.orderId);
     const { products: updatedProducts } = req.body;
@@ -244,11 +263,15 @@ orderRouter.get("/recent/:id?", async (req, res) => {
 
 
 orderRouter.get("/users/who-bought/:productId", async (req, res) => {
-  const { productId } = req.params;
-  try {
+  const productId = parseInt(req.params.productId) || 0;
+  if(productId === 0){
+    res.status(400).json({ error: "Product ID is required" });
+    return;
+  }
 
+  try {
     const productExists = await db.product.findUnique({
-      where: { id: parseInt(productId) },
+      where: { id: (productId) },
     });
 
     if (!productExists) {
@@ -286,9 +309,14 @@ orderRouter.get("/users/who-bought/:productId", async (req, res) => {
   }
 });
 
-orderRouter.get("/:id?", async (req, res) => {
+orderRouter.get("/:id?",async (req, res) => {
   try {
     const userId = req.params.id ? parseInt(req.params.id) : null;
+
+    if(!userId ){
+      res.status(400).json({ message: "User ID is required" });
+      return;
+    }
 
     const orders = await db.order.findMany({
       where: userId ? { userId } : {},

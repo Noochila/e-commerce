@@ -32,6 +32,9 @@ const updateOrderSchema = zod_1.default.object({
         quantity: zod_1.default.number().int().min(0, "Quantity must be a positive integer"),
     })).nonempty("Products array cannot be empty"),
 });
+const idSchema = zod_1.default.object({
+    id: zod_1.default.number().int().positive("User ID must be a positive integer").optional()
+});
 const validate = (schema) => {
     return (req, res, next) => {
         try {
@@ -48,6 +51,21 @@ const validate = (schema) => {
         }
     };
 };
+// const validateId = (schema: zod.Schema) => {
+//   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+//     try {
+//       schema.parse(req.params);
+//       next();
+//     } catch (error) {
+//       if (error instanceof zod.ZodError) {
+//         res.status(400).json({
+//           message: error.errors[0].message,
+//         })
+//         return;
+//       }
+//     }
+//   };
+// }
 exports.orderRouter.post("/", validate(orderSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const user = yield db_1.default.user.findUnique({
@@ -112,7 +130,7 @@ exports.orderRouter.post("/", validate(orderSchema), (req, res) => __awaiter(voi
         return;
     }
 }));
-exports.orderRouter.put("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.orderRouter.put("/", validate(updateOrderSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const orderId = parseInt(req.body.orderId);
         const { products: updatedProducts } = req.body;
@@ -218,10 +236,14 @@ exports.orderRouter.get("/recent/:id?", (req, res) => __awaiter(void 0, void 0, 
     }
 }));
 exports.orderRouter.get("/users/who-bought/:productId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { productId } = req.params;
+    const productId = parseInt(req.params.productId) || 0;
+    if (productId === 0) {
+        res.status(400).json({ error: "Product ID is required" });
+        return;
+    }
     try {
         const productExists = yield db_1.default.product.findUnique({
-            where: { id: parseInt(productId) },
+            where: { id: (productId) },
         });
         if (!productExists) {
             res.status(404).json({ error: 'Product not found' });
@@ -257,6 +279,10 @@ exports.orderRouter.get("/users/who-bought/:productId", (req, res) => __awaiter(
 exports.orderRouter.get("/:id?", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = req.params.id ? parseInt(req.params.id) : null;
+        if (!userId) {
+            res.status(400).json({ message: "User ID is required" });
+            return;
+        }
         const orders = yield db_1.default.order.findMany({
             where: userId ? { userId } : {},
             select: {
