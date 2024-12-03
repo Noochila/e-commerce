@@ -1,7 +1,7 @@
 import express, { NextFunction } from "express"
 export const userRouter = express.Router()
 import db from "../db"
-import zod, { any } from "zod"
+import zod, { any, ZodAny } from "zod"
 import { Prisma } from "../db"
 
 const UserSchema = zod.object({
@@ -36,6 +36,12 @@ const validate = (schema: Zod.Schema) => async (req: express.Request, res: expre
 
 userRouter.put("/", validate(UserUpdateSchema), async (req, res) => {
 
+    const { email } = req.body;
+    if (!email) {
+        res.status(400).json({ message: "Email is required for updating" });
+        return;
+    }
+
     const user = await db.user.findUnique({ where: { email: req.body.email } })
 
     if (user) {
@@ -61,18 +67,38 @@ userRouter.put("/", validate(UserUpdateSchema), async (req, res) => {
 })
 
 userRouter.get("/", (req, res) => {
-    const user = req.body.email
-   
-    db.user.findUnique({ where: { email: user }, select: { id: true, name: true, email: true, phone: true } }).then((user) => {
-        res.json(user)
-    }).catch((e) => {
+    const user = req.body.email;
+
+    if (!user || typeof user !== 'string' || (user.search('@') === -1 && user.search('.') === -1)) {
         res.status(400).json({
-            message: "User not found"
+            message: "Invalid email"
         })
+        return;
+
+    }
+
+    db.user.findUnique({
+        where: { email: user },
+        select: { id: true, name: true, email: true, phone: true }
     })
-})
+        .then((user) => {
+            if (!user) {
+                return res.status(404).json({
+                    message: "User not found"
+                });
+            }
+            res.json(user);
+        })
+        .catch((e) => {
+            console.error(e); // Log the error for debugging
+            res.status(500).json({
+                message: "An error occurred while fetching the user"
+            });
+        });
+});
 
 userRouter.post("/", validate(UserSchema), async (req, res) => {
+
 
     try {
         const user = await db.user.create({ data: req.body, select: { id: true, name: true, email: true, phone: true } })
@@ -101,3 +127,8 @@ userRouter.post("/", validate(UserSchema), async (req, res) => {
     }
 
 })
+
+userRouter.use((err:Error, req:express.Request, res:express.Response, next:NextFunction) => {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+});

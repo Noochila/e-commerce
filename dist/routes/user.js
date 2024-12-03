@@ -67,11 +67,28 @@ exports.userRouter.put("/", validate(UserUpdateSchema), (req, res) => __awaiter(
 }));
 exports.userRouter.get("/", (req, res) => {
     const user = req.body.email;
-    db_1.default.user.findUnique({ where: { email: user }, select: { id: true, name: true, email: true, phone: true } }).then((user) => {
-        res.json(user);
-    }).catch((e) => {
+    if (!user || typeof user !== 'string' || (user.search('@') === -1 && user.search('.') === -1)) {
         res.status(400).json({
-            message: "User not found"
+            message: "Invalid email"
+        });
+        return;
+    }
+    db_1.default.user.findUnique({
+        where: { email: user },
+        select: { id: true, name: true, email: true, phone: true }
+    })
+        .then((user) => {
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+        res.json(user);
+    })
+        .catch((e) => {
+        console.error(e); // Log the error for debugging
+        res.status(500).json({
+            message: "An error occurred while fetching the user"
         });
     });
 });
