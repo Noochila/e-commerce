@@ -464,7 +464,7 @@ Handles unexpected server errors.
 ## Middleware and Validation
 - **Zod Schemas**: Used for validating request bodies and parameters.
 - **Custom Validation Middleware**: Ensures data integrity before processing requests.
-
+<!-- 
 ## Example Usage
 **Creating an Order with Curl**:
 ```bash
@@ -478,7 +478,7 @@ curl -X POST http://localhost:3000/ \
 2. Create a feature branch (`git checkout -b feature/your-feature`).
 3. Commit your changes (`git commit -m 'Add new feature'`).
 4. Push the branch (`git push origin feature/your-feature`).
-5. Open a pull request.
+5. Open a pull request. -->
 
 ## License
 This project is licensed under the MIT License.
