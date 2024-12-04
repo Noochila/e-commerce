@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -66,9 +57,9 @@ const validate = (schema) => {
 //     }
 //   };
 // }
-exports.orderRouter.post("/", validate(orderSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.orderRouter.post("/", validate(orderSchema), async (req, res) => {
     try {
-        const user = yield db_1.default.user.findUnique({
+        const user = await db_1.default.user.findUnique({
             where: { id: req.body.userId },
         });
         if (!user) {
@@ -77,7 +68,7 @@ exports.orderRouter.post("/", validate(orderSchema), (req, res) => __awaiter(voi
         }
         const products = req.body.products;
         for (const product of products) {
-            const productDb = yield db_1.default.product.findUnique({
+            const productDb = await db_1.default.product.findUnique({
                 where: { id: product.productId },
             });
             if (!productDb || productDb.stockQuantity < product.quantity) {
@@ -88,22 +79,22 @@ exports.orderRouter.post("/", validate(orderSchema), (req, res) => __awaiter(voi
             }
         }
         try {
-            yield db_1.default.$transaction((transaction) => __awaiter(void 0, void 0, void 0, function* () {
-                const order = yield transaction.order.create({
+            await db_1.default.$transaction(async (transaction) => {
+                const order = await transaction.order.create({
                     data: {
                         userId: req.body.userId,
                         orderDate: new Date(),
                     },
                 });
                 for (const product of products) {
-                    yield transaction.orderProduct.create({
+                    await transaction.orderProduct.create({
                         data: {
                             orderId: order.id,
                             productId: product.productId,
                             quantity: product.quantity,
                         },
                     });
-                    yield transaction.product.update({
+                    await transaction.product.update({
                         where: { id: product.productId },
                         data: {
                             stockQuantity: {
@@ -116,7 +107,7 @@ exports.orderRouter.post("/", validate(orderSchema), (req, res) => __awaiter(voi
                     message: "Order created successfully",
                     order,
                 });
-            }));
+            });
         }
         catch (transactionError) {
             console.error("Transaction error:", transactionError);
@@ -129,12 +120,12 @@ exports.orderRouter.post("/", validate(orderSchema), (req, res) => __awaiter(voi
         res.status(500).json({ message: "Internal server error" });
         return;
     }
-}));
-exports.orderRouter.put("/", validate(updateOrderSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.orderRouter.put("/", validate(updateOrderSchema), async (req, res) => {
     try {
         const orderId = parseInt(req.body.orderId);
         const { products: updatedProducts } = req.body;
-        const existingOrder = yield db_1.default.order.findUnique({
+        const existingOrder = await db_1.default.order.findUnique({
             where: { id: orderId },
             include: {
                 products: true, // Include associated OrderProduct entries
@@ -147,12 +138,12 @@ exports.orderRouter.put("/", validate(updateOrderSchema), (req, res) => __awaite
         // Map existing products by productId for quick lookup
         const existingProductsMap = new Map(existingOrder.products.map((p) => [p.productId, p]));
         // Start a transaction for the update operation
-        yield db_1.default.$transaction((transaction) => __awaiter(void 0, void 0, void 0, function* () {
+        await db_1.default.$transaction(async (transaction) => {
             for (const updatedProduct of updatedProducts) {
                 const existingProduct = existingProductsMap.get(updatedProduct.productId);
                 if (existingProduct) {
                     // Revert stock quantity for the existing product
-                    yield transaction.product.update({
+                    await transaction.product.update({
                         where: { id: existingProduct.productId },
                         data: {
                             stockQuantity: {
@@ -161,7 +152,7 @@ exports.orderRouter.put("/", validate(updateOrderSchema), (req, res) => __awaite
                         },
                     });
                     // Remove the existing OrderProduct entry
-                    yield transaction.orderProduct.delete({
+                    await transaction.orderProduct.delete({
                         where: { id: existingProduct.id },
                     });
                 }
@@ -170,14 +161,14 @@ exports.orderRouter.put("/", validate(updateOrderSchema), (req, res) => __awaite
                     continue;
                 }
                 // Validate stock availability for the new product
-                const productDb = yield transaction.product.findUnique({
+                const productDb = await transaction.product.findUnique({
                     where: { id: updatedProduct.productId },
                 });
                 if (!productDb || productDb.stockQuantity < updatedProduct.quantity) {
                     throw new Error(`Product with ID ${updatedProduct.productId} is out of stock or not found.`);
                 }
                 // Decrement stock quantities for the new product
-                yield transaction.product.update({
+                await transaction.product.update({
                     where: { id: updatedProduct.productId },
                     data: {
                         stockQuantity: {
@@ -186,7 +177,7 @@ exports.orderRouter.put("/", validate(updateOrderSchema), (req, res) => __awaite
                     },
                 });
                 // Add updated product to OrderProduct
-                yield transaction.orderProduct.create({
+                await transaction.orderProduct.create({
                     data: {
                         orderId: existingOrder.id,
                         productId: updatedProduct.productId,
@@ -194,7 +185,7 @@ exports.orderRouter.put("/", validate(updateOrderSchema), (req, res) => __awaite
                     },
                 });
             }
-        }));
+        });
         res.json({ message: "Order updated successfully" });
     }
     catch (error) {
@@ -203,11 +194,11 @@ exports.orderRouter.put("/", validate(updateOrderSchema), (req, res) => __awaite
             res.status(500).json({ message: "Failed to update order", error: error.message });
         }
     }
-}));
-exports.orderRouter.get("/recent/:id?", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.orderRouter.get("/recent/:id?", async (req, res) => {
     try {
         const userId = req.params.id ? parseInt(req.params.id) : null;
-        const orders = yield db_1.default.order.findMany({
+        const orders = await db_1.default.order.findMany({
             where: {
                 userId: userId ? userId : undefined,
                 orderDate: {
@@ -234,22 +225,22 @@ exports.orderRouter.get("/recent/:id?", (req, res) => __awaiter(void 0, void 0, 
         console.error("Error fetching recent orders:", error);
         res.status(500).json({ error: "An error occurred while fetching recent orders" });
     }
-}));
-exports.orderRouter.get("/users/who-bought/:productId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.orderRouter.get("/users/who-bought/:productId", async (req, res) => {
     const productId = parseInt(req.params.productId) || 0;
     if (productId === 0) {
         res.status(400).json({ error: "Product ID is required" });
         return;
     }
     try {
-        const productExists = yield db_1.default.product.findUnique({
+        const productExists = await db_1.default.product.findUnique({
             where: { id: (productId) },
         });
         if (!productExists) {
             res.status(404).json({ error: 'Product not found' });
             return;
         }
-        const users = yield db_1.default.orderProduct.findMany({
+        const users = await db_1.default.orderProduct.findMany({
             where: {
                 product: {
                     name: productExists.name
@@ -275,15 +266,15 @@ exports.orderRouter.get("/users/who-bought/:productId", (req, res) => __awaiter(
             res.status(500).json({ error: "Internal server error" });
         }
     }
-}));
-exports.orderRouter.get("/:id?", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.orderRouter.get("/:id?", async (req, res) => {
     try {
         const userId = req.params.id ? parseInt(req.params.id) : null;
         if (!userId) {
             res.status(400).json({ message: "User ID is required" });
             return;
         }
-        const orders = yield db_1.default.order.findMany({
+        const orders = await db_1.default.order.findMany({
             where: userId ? { userId } : {},
             select: {
                 id: true,
@@ -305,5 +296,4 @@ exports.orderRouter.get("/:id?", (req, res) => __awaiter(void 0, void 0, void 0,
         console.error("Error fetching orders:", error);
         res.status(500).json({ error: "An error occurred while fetching orders" });
     }
-}));
-//# sourceMappingURL=order.js.map
+});

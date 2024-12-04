@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -30,7 +21,7 @@ const UserUpdateSchema = zod_1.default.object({
     password: zod_1.default.string().min(6, "Password too short").optional(),
     phone: zod_1.default.string().min(10, "Invalid phone number").optional()
 });
-const validate = (schema) => (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+const validate = (schema) => async (req, res, next) => {
     try {
         const user = schema.parse(req.body);
         next();
@@ -42,17 +33,17 @@ const validate = (schema) => (req, res, next) => __awaiter(void 0, void 0, void 
             });
         }
     }
-});
-exports.userRouter.put("/", validate(UserUpdateSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+};
+exports.userRouter.put("/", validate(UserUpdateSchema), async (req, res) => {
     const { email } = req.body;
     if (!email) {
         res.status(400).json({ message: "Email is required for updating" });
         return;
     }
-    const user = yield db_1.default.user.findUnique({ where: { email: req.body.email } });
+    const user = await db_1.default.user.findUnique({ where: { email: req.body.email } });
     if (user) {
         try {
-            const updatedUser = yield db_1.default.user.update({ where: { email: req.body.email }, data: req.body, select: { id: true, name: true, email: true, phone: true } });
+            const updatedUser = await db_1.default.user.update({ where: { email: req.body.email }, data: req.body, select: { id: true, name: true, email: true, phone: true } });
             res.json({
                 message: "User updated successfully",
                 user: updatedUser
@@ -69,7 +60,7 @@ exports.userRouter.put("/", validate(UserUpdateSchema), (req, res) => __awaiter(
             message: "User not found"
         });
     }
-}));
+});
 exports.userRouter.get("/", (req, res) => {
     const user = req.body.email;
     if (!user || typeof user !== 'string' || (user.search('@') === -1 && user.search('.') === -1)) {
@@ -97,9 +88,9 @@ exports.userRouter.get("/", (req, res) => {
         });
     });
 });
-exports.userRouter.post("/", validate(UserSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.userRouter.post("/", validate(UserSchema), async (req, res) => {
     try {
-        const user = yield db_1.default.user.create({ data: req.body, select: { id: true, name: true, email: true, phone: true } });
+        const user = await db_1.default.user.create({ data: req.body, select: { id: true, name: true, email: true, phone: true } });
         if (user) {
             res.json({
                 message: "User created successfully",
@@ -122,9 +113,8 @@ exports.userRouter.post("/", validate(UserSchema), (req, res) => __awaiter(void 
             }
         }
     }
-}));
+});
 exports.userRouter.use((err, req, res, next) => {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
 });
-//# sourceMappingURL=user.js.map

@@ -282,9 +282,7 @@ orderRouter.get("/users/who-bought/:productId", async (req, res) => {
 
     const users = await db.orderProduct.findMany({
       where: {
-        product: {
-          name: productExists.name
-        }
+        productId: productId
       },
       select: {
         order: {

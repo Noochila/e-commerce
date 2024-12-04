@@ -14,4 +14,3 @@ app.use("/api/v1", index_1.rootRouter);
 app.listen(process.env.PORT || port, () => {
     console.log(`Server is running on port ${port}`);
 });
-//# sourceMappingURL=index.js.map

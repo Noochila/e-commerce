@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -30,7 +21,7 @@ const productUpdateSchema = zod_1.default.object({
     category: zod_1.default.string().min(3, "Minimum 3 characters required").optional(),
     stockQuantity: zod_1.default.number().min(0, "Minimum 0 requried").optional()
 });
-const validate = (schema) => (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+const validate = (schema) => async (req, res, next) => {
     try {
         schema.parse(req.body);
         next();
@@ -47,10 +38,10 @@ const validate = (schema) => (req, res, next) => __awaiter(void 0, void 0, void 
             });
         }
     }
-});
-exports.productRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+};
+exports.productRouter.get("/", async (req, res) => {
     try {
-        const products = yield db_2.default.product.findMany({
+        const products = await db_2.default.product.findMany({
             select: { id: true, name: true, price: true, category: true, stockQuantity: true }
         });
         res.json({ products });
@@ -59,11 +50,11 @@ exports.productRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, f
         console.error(e);
         res.status(500).json({ error: 'Something went wrong' });
     }
-}));
-exports.productRouter.get("/total", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.productRouter.get("/total", async (req, res) => {
     var _a;
     try {
-        const quantity = yield db_2.default.product.aggregate({
+        const quantity = await db_2.default.product.aggregate({
             _sum: {
                 stockQuantity: true
             }
@@ -76,10 +67,10 @@ exports.productRouter.get("/total", (req, res) => __awaiter(void 0, void 0, void
         console.error(e);
         res.status(500).json({ error: 'Something went wrong' });
     }
-}));
-exports.productRouter.post("/", validate(productSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.productRouter.post("/", validate(productSchema), async (req, res) => {
     try {
-        const product = yield db_2.default.product.create({
+        const product = await db_2.default.product.create({
             data: req.body,
             select: { name: true, price: true, category: true, stockQuantity: true }
         });
@@ -96,13 +87,13 @@ exports.productRouter.post("/", validate(productSchema), (req, res) => __awaiter
             res.status(500).json({ error: 'Something went wrong' });
         }
     }
-}));
-exports.productRouter.put("/", validate(productUpdateSchema), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.productRouter.put("/", validate(productUpdateSchema), async (req, res) => {
     const { name } = req.body;
     try {
-        const product = yield db_2.default.product.findUnique({ where: { name } });
+        const product = await db_2.default.product.findUnique({ where: { name } });
         if (product) {
-            const updatedProduct = yield db_2.default.product.update({
+            const updatedProduct = await db_2.default.product.update({
                 where: { name },
                 data: req.body,
                 select: { name: true, price: true, category: true, stockQuantity: true }
@@ -124,5 +115,4 @@ exports.productRouter.put("/", validate(productUpdateSchema), (req, res) => __aw
             res.status(500).json({ error: 'Internal server error' });
         }
     }
-}));
-//# sourceMappingURL=product.js.map
+});
