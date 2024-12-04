@@ -1,3 +1,38 @@
+## Tech Stack
+- **Backend**: Node.js, Express.js
+- **Database**: PostgreSQL (managed with Prisma)
+- **Validation**: Zod
+- **Middleware**: Custom middleware for validation
+
+## Installation
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/noochila/e-commerce.git
+   cd e-commerce
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**:
+   Create a `.env` file at the root of the project and add the following variables:
+   ```env
+   DATABASE_URL=your-postgres-url
+   PORT=3000
+   ```
+
+4. **Run database migrations**:
+   ```bash
+   npx prisma migrate dev
+   ```
+
+5. **Start the server**:
+   ```bash
+   npm start
+   ```
+
 # User Router Endpoints Documentation
 
 ## **1. POST `/`**
@@ -342,4 +377,119 @@ Handles unexpected server errors.
         "message": "Internal server error"
     }
     ```
+
+
+# Order Router Endpoints Documentation
+
+
+## API Endpoints
+### 1. Create an Order
+**POST** `/`
+- **Description**: Create a new order with stock validation.
+- **Request Body**:
+  ```json
+  {
+    "userId": 1,
+    "products": [
+      {
+        "productId": 2,
+        "quantity": 3
+      }
+    ]
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "message": "Order created successfully.",
+    "orderId": 123
+  }
+  ```
+
+### 2. Update an Order
+**PUT** `/`
+- **Description**: Update an existing order and manage stock updates.
+- **Request Body**:
+  ```json
+  {
+    "orderId": 123,
+    "products": [
+      {
+        "productId": 2,
+        "quantity": 5
+      }
+    ]
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "message": "Order updated successfully.",
+    "orderId": 123
+  }
+  ```
+
+### 3. Fetch Recent Orders
+**GET** `/recent/:id?`
+- **Description**: Get all orders from the last 7 days for a user. If `id` is omitted, returns orders for the authenticated user.
+- **Response**:
+  ```json
+  [
+    {
+      "orderId": 123,
+      "userId": 1,
+      "products": [
+        {
+          "productId": 2,
+          "productName": "Product A",
+          "quantity": 3
+        }
+      ]
+    }
+  ]
+  ```
+
+### 4. Fetch Users Who Bought a Product
+**GET** `/users/who-bought/:productId`
+- **Description**: Retrieve a list of user IDs who bought a specified product.
+- **Response**:
+  ```json
+  [
+    1,
+    2,
+    5
+  ]
+  ```
+
+## Middleware and Validation
+- **Zod Schemas**: Used for validating request bodies and parameters.
+- **Custom Validation Middleware**: Ensures data integrity before processing requests.
+
+## Example Usage
+**Creating an Order with Curl**:
+```bash
+curl -X POST http://localhost:3000/ \
+-H "Content-Type: application/json" \
+-d '{"userId": 1, "products": [{"productId": 2, "quantity": 3}]}'
+```
+
+## Contribution Guidelines
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feature/your-feature`).
+3. Commit your changes (`git commit -m 'Add new feature'`).
+4. Push the branch (`git push origin feature/your-feature`).
+5. Open a pull request.
+
+## License
+This project is licensed under the MIT License.
+
+## Acknowledgements
+- [Express.js](https://expressjs.com/)
+- [Prisma](https://www.prisma.io/)
+- [Zod](https://github.com/colinhacks/zod)
+
+## Contact
+Manoj Noochila - manojnoochila@gmail.com
+
+
 
