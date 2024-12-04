@@ -455,9 +455,10 @@ Handles unexpected server errors.
 - **Response**:
   ```json
   [
+   { "userIds":[
     1,
     2,
-    5
+    5]}
   ]
   ```
 
