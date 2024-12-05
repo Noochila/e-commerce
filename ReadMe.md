@@ -35,7 +35,7 @@
 
 # User Router Endpoints Documentation
 
-## **1. POST `/`**
+## **1. POST `users/`**
 ### **Description:**
 Creates a new user.
 
@@ -81,7 +81,7 @@ Creates a new user.
 
 ---
 
-## **2. PUT `/`**
+## **2. PUT `users/`**
 ### **Description:**
 Updates an existing user.
 
@@ -139,7 +139,7 @@ Updates an existing user.
 
 ---
 
-## **3. GET `/`**
+## **3. GET `users/`**
 ### **Description:**
 Fetches a user by email.
 
@@ -200,7 +200,7 @@ Handles unexpected server errors.
 
 # Product Router Endpoints Documentation
 
-## **1. GET `/`**
+## **1. GET `products/`**
 ### **Description:**
 Fetches all products.
 
@@ -238,7 +238,7 @@ Fetches all products.
 
 ---
 
-## **2. GET `/total`**
+## **2. GET `products/total`**
 ### **Description:**
 Fetches the total stock quantity of all products.
 
@@ -261,7 +261,7 @@ Fetches the total stock quantity of all products.
 
 ---
 
-## **3. POST `/`**
+## **3. POST `products/`**
 ### **Description:**
 Creates a new product.
 
@@ -313,7 +313,7 @@ Creates a new product.
 
 ---
 
-## **4. PUT `/`**
+## **4. PUT `products/`**
 ### **Description:**
 Updates an existing product.
 
@@ -380,7 +380,7 @@ Handles unexpected server errors.
 
 # Orders Router Endpoints Documentation
 
-## **1. POST ****`/`**
+## **1. POST ****`orders/`**
 
 ### **Description:**
 
@@ -467,7 +467,7 @@ Creates a new order for a user.
 
 ---
 
-## **2. PUT ****`/`**
+## **2. PUT ****`orders/`**
 
 ### **Description:**
 
@@ -554,7 +554,7 @@ Updates an existing order.
 
 ---
 
-## **3. GET ****`/recent/:id?`**
+## **3. GET ****`orders/recent/:id?`**
 
 ### **Description:**
 
@@ -600,7 +600,7 @@ Fetches recent orders (from the last 7 days) for a specific user or all users if
 
 ---
 
-## **4. GET ****`/users/who-bought/:productId`**
+## **4. GET ****`orders/users/who-bought/:productId`**
 
 ### **Description:**
 
@@ -646,7 +646,7 @@ Fetches unique user IDs who have bought a specific product.
 
 ---
 
-## **5. GET ****`/:id?`**
+## **5. GET ****`orders/:id?`**
 
 ### **Description:**
 
