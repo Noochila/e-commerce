@@ -378,108 +378,343 @@ Handles unexpected server errors.
     }
     ```
 
+# Orders Router Endpoints Documentation
 
-# Order Router Endpoints Documentation
+## **1. POST ****`/`**
 
+### **Description:**
 
-## API Endpoints
-### 1. Create an Order
-**POST** `/`
-- **Description**: Create a new order with stock validation.
-- **Request Body**:
-  ```json
-  {
+Creates a new order for a user.
+
+### **Input:**
+
+**JSON Body:**
+
+```json
+{
     "userId": 1,
     "products": [
-      {
-        "productId": 2,
-        "quantity": 3
-      }
-    ]
-  }
-  ```
-- **Response**:
-  ```json
-  {
-    "message": "Order created successfully.",
-    "orderId": 123
-  }
-  ```
-
-### 2. Update an Order
-**PUT** `/`
-- **Description**: Update an existing order and manage stock updates.
-- **Request Body**:
-  ```json
-  {
-    "orderId": 123,
-    "products": [
-      {
-        "productId": 2,
-        "quantity": 5
-      }
-    ]
-  }
-  ```
-- **Response**:
-  ```json
-  {
-    "message": "Order updated successfully.",
-    "orderId": 123
-  }
-  ```
-
-### 3. Fetch Recent Orders
-**GET** `/recent/:id?`
-- **Description**: Get all orders from the last 7 days for a user. If `id` is omitted, returns orders for the authenticated user.
-- **Response**:
-  ```json
-  [
-    {
-      "orderId": 123,
-      "userId": 1,
-      "products": [
         {
-          "productId": 2,
-          "productName": "Product A",
-          "quantity": 3
+            "productId": 101,
+            "quantity": 2
+        },
+        {
+            "productId": 102,
+            "quantity": 1
         }
-      ]
-    }
-  ]
-  ```
-
-### 4. Fetch Users Who Bought a Product
-**GET** `/users/who-bought/:productId`
-- **Description**: Retrieve a list of user IDs who bought a specified product.
-- **Response**:
-  ```json
-  [
-   { "userIds":[
-    1,
-    2,
-    5]}
-  ]
-  ```
-
-## Middleware and Validation
-- **Zod Schemas**: Used for validating request bodies and parameters.
-- **Custom Validation Middleware**: Ensures data integrity before processing requests.
-<!-- 
-## Example Usage
-**Creating an Order with Curl**:
-```bash
-curl -X POST http://localhost:3000/ \
--H "Content-Type: application/json" \
--d '{"userId": 1, "products": [{"productId": 2, "quantity": 3}]}'
+    ]
+}
 ```
 
-## Contribution Guidelines
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature/your-feature`).
-3. Commit your changes (`git commit -m 'Add new feature'`).
-4. Push the branch (`git push origin feature/your-feature`).
-5. Open a pull request. -->
+### **Output:**
+
+- **Success Response:**
+  **Status Code:** 200
+
+  ```json
+  {
+      "message": "Order created successfully",
+      "order": {
+          "id": 1,
+          "userId": 1,
+          "orderDate": "2024-12-05T10:00:00.000Z",
+          "products": [
+              {
+                  "productId": 101,
+                  "quantity": 2
+              },
+              {
+                  "productId": 102,
+                  "quantity": 1
+              }
+          ]
+      }
+  }
+  ```
+
+- **Error Responses:**
+
+  - **Status Code:** 400 (User not found)
+    ```json
+    {
+        "message": "User not found"
+    }
+    ```
+  - **Status Code:** 400 (Product out of stock or not found)
+    ```json
+    {
+        "message": "Product with ID 101 is out of stock or Not found"
+    }
+    ```
+  - **Status Code:** 400 (Validation error)
+    ```json
+    {
+        "message": "[Validation error message]"
+    }
+    ```
+  - **Status Code:** 500 (Transaction error)
+    ```json
+    {
+        "message": "Failed to create order"
+    }
+    ```
+  - **Status Code:** 500 (Internal server error)
+    ```json
+    {
+        "message": "Internal server error"
+    }
+    ```
+
+---
+
+## **2. PUT ****`/`**
+
+### **Description:**
+
+Updates an existing order.
+
+### **Input:**
+
+**JSON Body:**
+
+```json
+{
+    "orderId": 1,
+    "products": [
+        {
+            "productId": 101,
+            "quantity": 3
+        },
+        {
+            "productId": 103,
+            "quantity": 2
+        }
+    ]
+}
+```
+
+### **Output:**
+
+- **Success Response:**
+  **Status Code:** 200
+
+  ```json
+  {
+      "message": "Order updated successfully",
+      "order": {
+          "id": 1,
+          "userId": 1,
+          "orderDate": "2024-12-05T10:00:00.000Z",
+          "products": [
+              {
+                  "productId": 101,
+                  "quantity": 3
+              },
+              {
+                  "productId": 103,
+                  "quantity": 2
+              }
+          ]
+      }
+  }
+  ```
+
+- **Error Responses:**
+
+  - **Status Code:** 404 (Order not found)
+    ```json
+    {
+        "message": "Order not found"
+    }
+    ```
+  - **Status Code:** 400 (Product out of stock or not found)
+    ```json
+    {
+        "message": "Product with ID 103 is out of stock or Not found"
+    }
+    ```
+  - **Status Code:** 400 (Validation error)
+    ```json
+    {
+        "message": "[Validation error message]"
+    }
+    ```
+  - **Status Code:** 500 (Transaction error)
+    ```json
+    {
+        "message": "Failed to update order"
+    }
+    ```
+  - **Status Code:** 500 (Internal server error)
+    ```json
+    {
+        "message": "Internal server error"
+    }
+    ```
+
+---
+
+## **3. GET ****`/recent/:id?`**
+
+### **Description:**
+
+Fetches recent orders (from the last 7 days) for a specific user or all users if `id` is not provided.
+
+### **Input:**
+
+**Path Parameter (Optional):**
+
+- `id` (integer): The user ID to fetch recent orders for.
+
+### **Output:**
+
+- **Success Response:**
+  **Status Code:** 200
+
+  ```json
+  {
+      "orders": [
+          {
+              "id": 1,
+              "orderDate": "2024-12-01T10:00:00.000Z",
+              "userId": 1,
+              "products": [
+                  {
+                      "productId": 101,
+                      "quantity": 2
+                  }
+              ]
+          }
+      ]
+  }
+  ```
+
+- **Error Responses:**
+
+  - **Status Code:** 500
+    ```json
+    {
+        "error": "An error occurred while fetching recent orders"
+    }
+    ```
+
+---
+
+## **4. GET ****`/users/who-bought/:productId`**
+
+### **Description:**
+
+Fetches unique user IDs who have bought a specific product.
+
+### **Input:**
+
+**Path Parameter:**
+
+- `productId` (integer): The product ID to search for.
+
+### **Output:**
+
+- **Success Response:**
+  **Status Code:** 200
+
+  ```json
+  {
+      "userIds": [1, 2, 3]
+  }
+  ```
+
+- **Error Responses:**
+
+  - **Status Code:** 400 (Product ID missing)
+    ```json
+    {
+        "error": "Product ID is required"
+    }
+    ```
+  - **Status Code:** 404 (Product not found)
+    ```json
+    {
+        "error": "Product not found"
+    }
+    ```
+  - **Status Code:** 500
+    ```json
+    {
+        "error": "Internal server error"
+    }
+    ```
+
+---
+
+## **5. GET ****`/:id?`**
+
+### **Description:**
+
+Fetches all orders for a specific user or all users if `id` is not provided.
+
+### **Input:**
+
+**Path Parameter (Optional):**
+
+- `id` (integer): The user ID to fetch orders for.
+
+### **Output:**
+
+- **Success Response:**
+  **Status Code:** 200
+
+  ```json
+  {
+      "orders": [
+          {
+              "id": 1,
+              "orderDate": "2024-12-05T10:00:00.000Z",
+              "userId": 1,
+              "products": [
+                  {
+                      "productId": 101,
+                      "quantity": 2
+                  }
+              ]
+          }
+      ]
+  }
+  ```
+
+- **Error Responses:**
+
+  - **Status Code:** 400 (User ID missing)
+    ```json
+    {
+        "message": "User ID is required"
+    }
+    ```
+  - **Status Code:** 500
+    ```json
+    {
+        "error": "An error occurred while fetching orders"
+    }
+    ```
+
+---
+
+## **6. Global Error Handler**
+
+### **Description:**
+
+Handles unexpected server errors.
+
+### **Output:**
+
+- **Error Response:**
+  - **Status Code:** 500
+    ```json
+    {
+        "message": "Internal server error"
+    }
+    ```
+
+
 
 ## License
 This project is licensed under the MIT License.
